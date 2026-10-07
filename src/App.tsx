@@ -74,13 +74,14 @@ export default function App(){
  const cycle=()=>setTheme(theme==='dark'?'light':'dark')
  const nav:[Tab,string,string][]=[['home','home','Accueil'],['study','cards','Réviser'],['me','user','Profil']]
  return <div className="stage"><div className="device">
+  <div className="bgfx" aria-hidden="true"><i/><i/><i/></div>
   <AnimatePresence>{splash&&<Splash key="s" first={!seen} onDone={()=>{setSeen(true);setSplash(false)}}/>}</AnimatePresence>
   {!splash&&!me&&<Onboard onSave={setMe}/>}
   {!splash&&me&&<>
    <AnimatePresence mode="wait"><motion.main key={tab} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.2}}>
     {tab==='home'&&<Home me={me} p={p} theme={theme} setTheme={cycle} go={m=>{setMod(m);setTab('study')}}/>}
     {tab==='study'&&<div className="page"><div className="top"><div><small>Module</small><h1 className="sm">{mod.name}</h1></div><button className="ib" onClick={()=>setTab('home')} aria-label="Retour"><Icon n="back"/></button></div>
-     <Study cards={mod.cards!} p={p} setP={f=>setP(f)}/></div>}
+     <Study cards={mod.cards!} p={p} setP={f=>setP(f)} onHome={()=>setTab('home')}/></div>}
     {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})}/>}
    </motion.main></AnimatePresence>
    <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>setTab(k)}>
