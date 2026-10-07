@@ -3,6 +3,7 @@ import {AnimatePresence,motion} from 'framer-motion'
 import {MODULES,Module} from './data'
 import Study from './Study'
 import {Icon,Tilt} from './ui'
+import Splash3D from './Splash3D'
 export interface Prog{st:Record<number,'k'|'n'|'d'>;fav:Record<number,boolean>}
 type Role='Interne'|'Résident'|'Étudiant'; interface Profile{name:string;role:Role}
 type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'me'
@@ -14,7 +15,7 @@ function Splash({first,onDone}:{first:boolean;onDone:()=>void}){
  useEffect(()=>{if(!first){const t=setTimeout(onDone,1300);return()=>clearTimeout(t)}},[first,onDone])
  return <motion.div className="splash" exit={{opacity:0}}>
   <motion.div className="logo3d" initial={{scale:.85,opacity:0}} animate={{scale:1,opacity:1}} transition={{duration:.5}}>
-   <span>L</span></motion.div>
+   <Splash3D/><span>L</span></motion.div>
   <motion.h1 initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.4}}>l'interne</motion.h1>
   <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.7}}>Ta révision médicale,<br/>fluide comme un swipe.</motion.p>
   {first&&<motion.button className="cta" onClick={onDone} initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:1}}>Commencer</motion.button>}
@@ -53,7 +54,7 @@ function Home({me,p,go,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;th
   <h2 className="sec">Modules</h2>
   <div className="grid">{MODULES.map((m,i)=><motion.div key={m.key} initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.08+i*.05}}>
    <Tilt className={'mod'+(m.cards?'':' lock')} disabled={!m.cards} onClick={()=>m.cards&&go(m)}>
-    <h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
+    <div className="em" aria-hidden="true">{m.code}</div><h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
  </div>
 }
 
