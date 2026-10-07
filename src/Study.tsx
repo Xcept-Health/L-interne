@@ -2,18 +2,10 @@ import {useState} from 'react'
 import {motion,animate,useMotionValue,useTransform,useDragControls} from 'framer-motion'
 import {Card} from './data'
 import {Icon} from './ui'
+import MindMap,{exportPng} from './MindMap'
 import type {Prog} from './App'
 type A='k'|'n'|'d'; type F='all'|'rev'|'fav'
 const buzz=()=>navigator.vibrate?.(12)
-
-function MindMap({d}:{d:Card}){
- const hh=(t:string)=>Math.max(30,12+Math.ceil(t.length/30)*13);let y=0;const P=d.it.map(t=>{const h=hh(t),r=[y,h];y+=h+6;return r})
- const H=Math.max(y,100),cy=H/2
- return <svg viewBox={`0 0 360 ${H}`} width="100%">{d.it.map((t,i)=>{const[py,h]=P[i],c=py+h/2
-  return <g key={i}><path d={`M112 ${cy}C140 ${cy} 140 ${c} 166 ${c}`} fill="none" stroke="var(--a)" strokeWidth="2"/>
-  <foreignObject x="166" y={py} width="192" height={h}><div className="nd">{t}</div></foreignObject></g>})}
-  <foreignObject x="2" y={cy-45} width="110" height="90"><div className="rt">{d.q}</div></foreignObject></svg>
-}
 
 function Deck({d,p,onAct,onFav}:{d:Card;p:Prog;onAct:(a:A)=>void;onFav:()=>void}){
  const [flip,setFlip]=useState(false),[map,setMap]=useState(false),ctl=useDragControls()
@@ -28,22 +20,22 @@ function Deck({d,p,onAct,onFav}:{d:Card;p:Prog;onAct:(a:A)=>void;onFav:()=>void}
  <motion.div className="card" drag dragControls={ctl} dragListener={false} dragSnapToOrigin dragElastic={.85} dragMomentum={false}
   style={{x,y,rotate:rot}} onDragEnd={end} initial={{scale:.92,opacity:0}} animate={{scale:1,opacity:1}}
   onTap={()=>!flip&&setFlip(true)} exit={{opacity:0}}>
-  <motion.div className="stamp k" style={{opacity:ok}}>✓ Retenu</motion.div>
-  <motion.div className="stamp n" style={{opacity:no}}>✗ Pas retenu</motion.div>
-  <motion.div className="stamp d" style={{opacity:db}}>? Doute</motion.div>
+  <motion.div className="stamp k" style={{opacity:ok}}>Retenu</motion.div>
+  <motion.div className="stamp n" style={{opacity:no}}>Pas retenu</motion.div>
+  <motion.div className="stamp d" style={{opacity:db}}>Doute</motion.div>
   <motion.div className="flipper" animate={{rotateY:flip?180:0}} transition={{type:'spring',stiffness:140,damping:17}}>
    <div className="face front" onPointerDown={e=>ctl.start(e)}>
     <motion.svg className="ms" viewBox="-60 -50 120 100" animate={{y:[0,-6,0]}} transition={{repeat:Infinity,duration:3.2}}>
-     <path fill="#8fd8f5" d="M-48 8C-52-22-30-38-12-34C0-46 28-44 34-26C54-24 58 4 46 18C40 36-40 36-48 8Z"/>
-     <circle cx="-14" cy="-6" r="5" fill="#16233a"/><circle cx="14" cy="-6" r="5" fill="#16233a"/>
-     <path d="M-12 6Q0 20 12 6" fill="none" stroke="#16233a" strokeWidth="4" strokeLinecap="round"/></motion.svg>
+     <path fill="var(--fill)" stroke="var(--edge)" strokeWidth="2" d="M-48 8C-52-22-30-38-12-34C0-46 28-44 34-26C54-24 58 4 46 18C40 36-40 36-48 8Z"/>
+     <circle cx="-14" cy="-6" r="5" fill="var(--t)"/><circle cx="14" cy="-6" r="5" fill="var(--t)"/>
+     <path d="M-12 6Q0 20 12 6" fill="none" stroke="var(--t)" strokeWidth="4" strokeLinecap="round"/></motion.svg>
     <div className="meta">Q{d.id} · {d.it.length} éléments</div><h2>{d.q}</h2>
-    <div className="chips">{st==='n'&&<span>à revoir</span>}{st==='d'&&<span>doute</span>}{fav&&<span>★ favori</span>}</div>
+    <div className="chips">{st==='n'&&<span>à revoir</span>}{st==='d'&&<span>doute</span>}{fav&&<span>favori</span>}</div>
     <div className="hint">Touche pour retourner · glisse pour noter</div>
    </div>
    <div className="face back">
     <div className="hd" onPointerDown={e=>ctl.start(e)}><div className="meta">Q{d.id}</div><h3>{d.q}</h3></div>
-    <div className="bd"><button className="sw" onClick={()=>setMap(!map)}>{map?'☰ Liste':'Mind map'}</button>
+    <div className="bd"><div className="tools"><button className="sw" onClick={()=>setMap(!map)}>{map?'Liste':'Carte mentale'}</button>{map&&<button className="sw" onClick={()=>exportPng(d)}><Icon n="download" s={16}/>Exporter en image</button>}</div>
      {map?<MindMap d={d}/>:<ul>{d.it.map((t,i)=><motion.li key={i} initial={{opacity:0,x:16}} animate={{opacity:flip?1:0,x:0}} transition={{delay:.25+i*.05}}>{t}</motion.li>)}</ul>}</div>
     <button className="fl" onClick={()=>setFlip(false)} aria-label="Retourner"><Icon n="flip" s={18}/></button>
    </div>
@@ -52,7 +44,7 @@ function Deck({d,p,onAct,onFav}:{d:Card;p:Prog;onAct:(a:A)=>void;onFav:()=>void}
  </motion.div>
  <div className="bt">
   <button onClick={()=>fly('n')}>Pas retenu</button><button onClick={()=>fly('d')}>Doute</button>
-  <button className="main" onClick={()=>fly('k')}>Retenu ✓</button></div></>
+  <button className="main" onClick={()=>fly('k')}>Retenu</button></div></>
 }
 
 export default function Study({cards,p,setP}:{cards:Card[];p:Prog;setP:(f:(p:Prog)=>Prog)=>void}){
