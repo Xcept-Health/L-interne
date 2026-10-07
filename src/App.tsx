@@ -53,7 +53,7 @@ function Home({me,p,go,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;th
   <h2 className="sec">Modules</h2>
   <div className="grid">{MODULES.map((m,i)=><motion.div key={m.key} initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.08+i*.05}}>
    <Tilt className={'mod'+(m.cards?'':' lock')} disabled={!m.cards} onClick={()=>m.cards&&go(m)}>
-    <div className="em" aria-hidden="true">{m.code}</div><h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
+    <h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
  </div>
 }
 
