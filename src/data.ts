@@ -8,7 +8,7 @@ Conditions d'accouchement de la face::Déflexion maximale de la tête|Menton en 
 Contraception d'urgence::DIU|Pilule du lendemain|RU 486
 Complications du paludisme pendant la grossesse::0–6 mois : aggravation des signes, anémie, avortement, MFIU|6–9 mois : accouchement prématuré, hémorragie, palu congénital, dystocie dynamique|Post-partum : ↓ lochies, ↓ montée laiteuse, infection puerpérale
 Étiologies de l'hémorragie de la délivrance::Rétention de débris placentaires|Atonie utérine|Inversion utérine|Afibrinogénémie
-SONU de base::Antibiotiques|Ocytociques|Anticonvulsivants|Extraction manuelle du placenta|l'internen utérine|Réanimation du nouveau-né|AVB instrumental (forceps, ventouse)
+SONU de base::Antibiotiques|Ocytociques|Anticonvulsivants|Extraction manuelle du placenta|Révision utérine|Réanimation du nouveau-né|AVB instrumental (forceps, ventouse)
 SONU complet::SONU de base|Transfusion sanguine|Césarienne|Laparotomie (rupture utérine, GEU, pelvipéritonite)
 CAT devant un stérilet infecté::Retirer le stérilet|Traiter l'infection|Proposer une autre méthode
 Complications de la RPM::Chorioamniotite|Embolie amniotique|Procidence du cordon|Présentation vicieuse
@@ -53,11 +53,11 @@ Signes de GEU rompue::Douleur diffuse irradiant lombes, épigastre, épaules|Cho
 Repères des présentations::Sommet : occiput|Bregma : grande fontanelle|Face : menton|Front : racine du nez|Épaule : acromion|Siège : sacrum
 Soins systématiques du nouveau-né::Pansement ombilical / clamp de Bard|Désobstruction buccale et VAS|Examen neurologique|Collyre aseptique|Vitamine K1|Mensurations (PN, PC, PT, taille)`
 export const GYNECO:Card[]=RAW.split('\n').map((l,i)=>{const[q,r]=l.split('::');return{id:i+1,q,it:r.split('|')}})
-export interface Module{key:string;name:string;sub:string;emoji:string;hue:string;cards?:Card[]}
+export interface Module{key:string;name:string;sub:string;code:string;hue:string;cards?:Card[]}
 export const MODULES:Module[]=[
-{key:'gyneco',name:'Gynécologie-Obstétrique',sub:'Cliniques & urgences',emoji:'🫶',hue:'#e5546b',cards:GYNECO},
-{key:'cardio',name:'Cardiologie',sub:'Bientôt',emoji:'🫀',hue:'#d94a3a'},
-{key:'pedia',name:'Pédiatrie',sub:'Bientôt',emoji:'🧸',hue:'#e0a31a'},
-{key:'chir',name:'Chirurgie',sub:'Bientôt',emoji:'🩺',hue:'#3b82c4'},
-{key:'urg',name:'Urgences',sub:'Bientôt',emoji:'🚑',hue:'#7a5bd6'},
-{key:'infec',name:'Infectieux',sub:'Bientôt',emoji:'🦠',hue:'#1f9d6b'}]
+{key:'gyneco',name:'Gynécologie-Obstétrique',sub:'Cliniques & urgences',code:'GO',hue:'#e5546b',cards:GYNECO},
+{key:'cardio',name:'Cardiologie',sub:'Bientôt',code:'CA',hue:'#d94a3a'},
+{key:'pedia',name:'Pédiatrie',sub:'Bientôt',code:'PE',hue:'#e0a31a'},
+{key:'chir',name:'Chirurgie',sub:'Bientôt',code:'CH',hue:'#3b82c4'},
+{key:'urg',name:'Urgences',sub:'Bientôt',code:'UR',hue:'#7a5bd6'},
+{key:'infec',name:'Infectieux',sub:'Bientôt',code:'IN',hue:'#1f9d6b'}]
