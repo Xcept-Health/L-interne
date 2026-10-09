@@ -4,9 +4,10 @@ import {MODULES,Module} from './data'
 import Study from './Study'
 import {Icon,Tilt} from './ui'
 import Splash3D from './Splash3D'
+import Calc,{Follow} from './Calc'
 export interface Prog{st:Record<number,'k'|'n'|'d'>;fav:Record<number,boolean>}
 type Role='Interne'|'Résident'|'Étudiant'; interface Profile{name:string;role:Role}
-type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'me'
+type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'calc'|'follow'|'me'
 function useLS<T>(k:string,i:T){const[v,s]=useState<T>(()=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):i}catch{return i}})
  useEffect(()=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}},[k,v]);return[v,s] as const}
 const ROLES:Role[]=['Interne','Résident','Étudiant']
@@ -42,7 +43,7 @@ function Ring({v}:{v:number}){
   <b>{v}%</b></div>
 }
 
-function Home({me,p,go,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;theme:Theme;setTheme:()=>void}){
+function Home({me,p,go,tool,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;tool:(t:Tab)=>void;theme:Theme;setTheme:()=>void}){
  const g=MODULES[0].cards!,known=g.filter(c=>p.st[c.id]==='k').length,pc=Math.round(known/g.length*100)
  const h=new Date().getHours(),hi=h<5||h>=18?'Bonsoir':'Bonjour'
  return <div className="page">
@@ -55,6 +56,9 @@ function Home({me,p,go,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;th
   <div className="grid">{MODULES.map((m,i)=><motion.div key={m.key} initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.08+i*.05}}>
    <Tilt className={'mod'+(m.cards?'':' lock')} disabled={!m.cards} onClick={()=>m.cards&&go(m)}>
     <div className="em" aria-hidden="true">{m.code}</div><h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
+  <h2 className="sec">Outils</h2>
+  <div className="grid">{([['calc','calc','Calculs','Scores & formules'],['follow','pulse','Suivi','Paramètres vitaux']] as [Tab,string,string,string][]).map(([t,i,n,s])=>
+   <Tilt key={t} className="mod" onClick={()=>tool(t)}><div className="em" aria-hidden="true"><Icon n={i}/></div><h4>{n}</h4><small>{s}</small></Tilt>)}</div>
  </div>
 }
 
@@ -72,16 +76,18 @@ export default function App(){
  const [splash,setSplash]=useState(true),[tab,setTab]=useState<Tab>('home'),[mod,setMod]=useState<Module>(MODULES[0])
  useEffect(()=>{const r=document.documentElement;theme==='auto'?r.removeAttribute('data-theme'):r.setAttribute('data-theme',theme)},[theme])
  const cycle=()=>setTheme(theme==='dark'?'light':'dark')
- const nav:[Tab,string,string][]=[['home','home','Accueil'],['study','cards','Réviser'],['me','user','Profil']]
+ const nav:[Tab,string,string][]=[['home','home','Accueil'],['study','cards','Résumés'],['calc','calc','Calculs'],['follow','pulse','Suivi'],['me','user','Profil']]
  return <div className="stage"><div className="device">
   <div className="bgfx" aria-hidden="true"><i/><i/><i/></div>
   <AnimatePresence>{splash&&<Splash key="s" first={!seen} onDone={()=>{setSeen(true);setSplash(false)}}/>}</AnimatePresence>
   {!splash&&!me&&<Onboard onSave={setMe}/>}
   {!splash&&me&&<>
    <AnimatePresence mode="wait"><motion.main key={tab} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.2}}>
-    {tab==='home'&&<Home me={me} p={p} theme={theme} setTheme={cycle} go={m=>{setMod(m);setTab('study')}}/>}
+    {tab==='home'&&<Home me={me} p={p} theme={theme} setTheme={cycle} tool={setTab} go={m=>{setMod(m);setTab('study')}}/>}
     {tab==='study'&&<div className="page"><div className="top"><div><small>Module</small><h1 className="sm">{mod.name}</h1></div><button className="ib" onClick={()=>setTab('home')} aria-label="Retour"><Icon n="back"/></button></div>
      <Study cards={mod.cards!} p={p} setP={f=>setP(f)} onHome={()=>setTab('home')}/></div>}
+    {tab==='calc'&&<Calc/>}
+    {tab==='follow'&&<Follow/>}
     {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})}/>}
    </motion.main></AnimatePresence>
    <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>setTab(k)}>
