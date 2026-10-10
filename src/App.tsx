@@ -8,6 +8,7 @@ import Calc from './Calc'
 import Vitals from './Vitals'
 import {useBackLayer} from './nav'
 import {BRAND,HOME_URL,LINKS} from './brand'
+import {useInstall,useOnline} from './pwa'
 export interface Prog{st:Record<number,'k'|'n'|'d'>;fav:Record<number,boolean>}
 type Role='Interne'|'Résident'|'Étudiant'; interface Profile{name:string;role:Role}
 type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'calc'|'follow'|'me'
@@ -71,14 +72,17 @@ function Home({me,p,go,tool,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>vo
   <h2 className="sec">Outils</h2>
   <div className="grid">{([['calc','calc','Calculs','Scores & formules'],['follow','pulse','Suivi','Paramètres vitaux']] as [Tab,string,string,string][]).map(([t,i,n,s])=>
    <Tilt key={t} className="mod" onClick={()=>tool(t)}><div className="em" aria-hidden="true"><Icon n={i}/></div><h4>{n}</h4><small>{s}</small></Tilt>)}</div>
+  <Brand/>
  </div>
 }
 
-function Me({me,setMe,theme,setTheme,reset}:{me:Profile;setMe:(p:Profile)=>void;theme:Theme;setTheme:(t:Theme)=>void;reset:()=>void}){
+function Me({me,setMe,theme,setTheme,reset,inst}:{me:Profile;setMe:(p:Profile)=>void;theme:Theme;setTheme:(t:Theme)=>void;reset:()=>void;inst:ReturnType<typeof useInstall>}){
  return <div className="page"><div className="top"><h1>Profil</h1></div>
   <label className="fld">Nom<input value={me.name} onChange={e=>setMe({...me,name:e.target.value})}/></label>
   <div className="fld">Statut<div className="pills">{ROLES.map(r=><button key={r} className={me.role===r?'on':''} aria-pressed={me.role===r} onClick={()=>setMe({...me,role:r})}>{r}</button>)}</div></div>
   <div className="fld">Thème<div className="pills">{(['auto','light','dark'] as Theme[]).map(t=><button key={t} className={theme===t?'on':''} aria-pressed={theme===t} onClick={()=>setTheme(t)}>{t==='auto'?'Auto':t==='light'?'Clair':'Sombre'}</button>)}</div></div>
+  {inst.can&&<button className="danger inst" onClick={inst.install}>Installer l'application (fonctionne hors ligne)</button>}
+  {inst.done&&<p className="hnt" style={{textAlign:'left',marginTop:12}}>Application installée : elle fonctionne sans connexion.</p>}
   <button className="danger" onClick={()=>confirm('Effacer toute ta progression ?')&&reset()}>Réinitialiser la progression</button>
   <Brand/></div>
 }
@@ -89,12 +93,13 @@ export default function App(){
  const [splash,setSplash]=useState(true),[tab,setTab]=useState<Tab>('home'),[mod,setMod]=useState<Module>(MODULES[0])
  useEffect(()=>{const r=document.documentElement;theme==='auto'?r.removeAttribute('data-theme'):r.setAttribute('data-theme',theme)},[theme])
  const cycle=()=>setTheme(theme==='dark'?'light':'dark')
- const [nonce,setNonce]=useState(0)
+ const [nonce,setNonce]=useState(0),online=useOnline(),inst=useInstall()
  useBackLayer(!splash&&!!me&&tab!=='home',()=>setTab('home'))
  const goTab=(k:Tab)=>{if(k===tab)setNonce(n=>n+1);else setTab(k)}
  const nav:[Tab,string,string][]=[['home','home','Accueil'],['study','cards','Résumés'],['calc','calc','Calculs'],['follow','pulse','Suivi'],['me','user','Profil']]
  return <div className="stage"><div className="device">
   <div className="bgfx" aria-hidden="true"><i/><i/><i/></div>
+  {!online&&<div className="offl" role="status">Hors ligne : tout fonctionne, tes données restent sur l'appareil</div>}
   <AnimatePresence>{splash&&<Splash key="s" first={!seen} onDone={()=>{setSeen(true);setSplash(false)}}/>}</AnimatePresence>
   {!splash&&!me&&<Onboard onSave={setMe}/>}
   {!splash&&me&&<>
@@ -104,7 +109,7 @@ export default function App(){
      <Study cards={mod.cards!} p={p} setP={f=>setP(f)} onHome={()=>setTab('home')}/></div>}
     {tab==='calc'&&<Calc/>}
     {tab==='follow'&&<Vitals/>}
-    {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})}/>}
+    {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})} inst={inst}/>}
    </motion.main>
    <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>goTab(k)}>
     {tab===k&&<motion.i layoutId="tab"/>}<Icon n={i}/><span>{l}</span></button>)}</nav></>}
