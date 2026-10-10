@@ -4,7 +4,8 @@ import {MODULES,Module} from './data'
 import Study from './Study'
 import {Icon,Tilt} from './ui'
 import Splash3D from './Splash3D'
-import Calc,{Follow} from './Calc'
+import Calc from './Calc'
+import Vitals from './Vitals'
 export interface Prog{st:Record<number,'k'|'n'|'d'>;fav:Record<number,boolean>}
 type Role='Interne'|'Résident'|'Étudiant'; interface Profile{name:string;role:Role}
 type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'calc'|'follow'|'me'
@@ -87,7 +88,7 @@ export default function App(){
     {tab==='study'&&<div className="page"><div className="top"><div><small>Module</small><h1 className="sm">{mod.name}</h1></div><button className="ib" onClick={()=>setTab('home')} aria-label="Retour"><Icon n="back"/></button></div>
      <Study cards={mod.cards!} p={p} setP={f=>setP(f)} onHome={()=>setTab('home')}/></div>}
     {tab==='calc'&&<Calc/>}
-    {tab==='follow'&&<Follow/>}
+    {tab==='follow'&&<Vitals/>}
     {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})}/>}
    </motion.main></AnimatePresence>
    <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>setTab(k)}>
