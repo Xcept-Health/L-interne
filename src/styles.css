@@ -1,5 +1,3 @@
-/* ====== L'interne — Design Clinique Premium & Glassmorphism Corrigé ====== */
-
 :root {
   color-scheme: light;
   /* Couleurs pleines pour éviter les bugs 3D */
@@ -547,3 +545,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .splash .by{font:500 11px var(--mn);letter-spacing:.14em;text-transform:uppercase;color:#A7A9AC}
 
 .brand .bk{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ===== Mode hors ligne ===== */
+.offl{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:30;max-width:calc(100% - 24px);padding:6px 14px;border-radius:99px;border:1px solid var(--edge);background:var(--nav);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);font:500 11px var(--mn);letter-spacing:.02em;color:var(--m);text-align:center;pointer-events:none}
+.danger.inst{background:var(--ink);color:var(--on);border-color:var(--ink)}
