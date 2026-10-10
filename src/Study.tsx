@@ -6,6 +6,7 @@ import {Card} from './data'
 import {Icon} from './ui'
 import MindMap,{MindMapViewer} from './MindMap'
 import type {Prog} from './App'
+import {useBackLayer} from './nav'
 type A='k'|'n'|'d'; type F='all'|'rev'|'fav'
 const buzz=()=>navigator.vibrate?.(12)
 
@@ -52,6 +53,7 @@ function Deck({d,p,onAct,onFav,onMap}:{d:Card;p:Prog;onAct:(a:A)=>void;onFav:()=
 
 export default function Study({cards,p,setP,onHome}:{cards:Card[];p:Prog;setP:(f:(p:Prog)=>Prog)=>void;onHome:()=>void}){
  const [f,setF]=useState<F>('all'),[mm,setMm]=useState<Card|null>(null)
+ useBackLayer(!!mm,()=>setMm(null))
  const build=(m:F)=>cards.filter(d=>m==='fav'?p.fav[d.id]:m==='rev'?'nd'.includes(p.st[d.id]||'-'):p.st[d.id]!=='k').map(d=>d.id)
  const [Q,setQ]=useState<number[]>(()=>build('all'))
  const pick=(m:F)=>{setF(m);setQ(build(m))}
