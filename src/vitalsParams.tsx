@@ -1,7 +1,9 @@
 import {useEffect,useRef,useState} from 'react'
-import type {ReactNode} from 'react'
+import type {ReactNode,Ref} from 'react'
 import {Icon} from './ui'
-import {Empty,Learn,Pills,Scale,Verdict} from './Calc'
+import Slider from './Slider'
+import type {SL} from './Slider'
+import {Empty,Learn,Scale,Verdict} from './Calc'
 import {fx,imcCat,num} from './calcdata'
 import type {Doc,Tone} from './calcdata'
 import type {NewR,Reading} from './Vitals'
@@ -35,46 +37,37 @@ function useSaved(){
 
 /* ====== Briques ====== */
 
-interface Next{l:string;f:()=>void;off?:boolean}
+/** Nettoie la saisie : chiffres seuls (et une seule virgule si `dec`), longueur limitée. */
+function clean(s:string,dec:boolean,max:number):string{
+ let t=s.replace(dec?/[^\d,.]/g:/\D/g,'').replace(/\./g,',')
+ if(dec){const i=t.indexOf(',');if(i>=0)t=t.slice(0,i+1)+t.slice(i+1).replace(/,/g,'');if(t.startsWith(','))t='0'+t}
+ let n=0,o=''
+ for(const c of t){if(c===','){o+=c;continue}if(n<max){o+=c;n++}}
+ return o}
 
-/** Pavé numérique XL. `max` = nombre de chiffres. Effacer : appui court = 1 caractère, appui long = tout. */
-function Keypad({v,on,dec=false,max=4,next}:{v:string;on:(s:string)=>void;dec?:boolean;max?:number;next?:Next}){
- const hold=useRef(0),fired=useRef(false)
- const push=(k:string)=>{
-  if(k===','){if(!dec||v.includes(','))return;buzz();on(v===''?'0,':v+',');return}
-  if(v.replace(',','').length>=max)return
-  buzz();on(v==='0'?k:v+k)}
- const back=()=>{buzz();on(v.slice(0,-1))}
- const down=()=>{fired.current=false;clearTimeout(hold.current);hold.current=window.setTimeout(()=>{fired.current=true;buzz(35);on('')},550)}
- const cancel=()=>{clearTimeout(hold.current);hold.current=0}
- const up=()=>{const wasHolding=hold.current!==0;cancel();if(wasHolding&&!fired.current)back();fired.current=false}
- const ref=useRef({push,back,next});ref.current={push,back,next}
- useEffect(()=>{
-  const h=(e:KeyboardEvent)=>{
-   const t=e.target as HTMLElement|null
-   if(t&&(t.tagName==='TEXTAREA'||t.tagName==='INPUT'||t.tagName==='SELECT'))return
-   if(e.ctrlKey||e.metaKey||e.altKey)return
-   const r=ref.current
-   if(/^\d$/.test(e.key))r.push(e.key)
-   else if(e.key===','||e.key==='.')r.push(',')
-   else if(e.key==='Backspace')r.back()
-   else if(e.key==='Enter'&&t?.tagName!=='BUTTON'&&r.next&&!r.next.off)r.next.f()
-   else return
-   e.preventDefault()}
-  window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h)},[])
- return <div className="kp" role="group" aria-label="Pavé numérique">
-  {['1','2','3','4','5','6','7','8','9'].map(k=><button key={k} type="button" className="kk" onClick={()=>push(k)}>{k}</button>)}
-  <button type="button" className="kk alt" disabled={!dec} aria-label="Virgule" onClick={()=>push(',')}>{dec?',':''}</button>
-  <button type="button" className="kk" onClick={()=>push('0')}>0</button>
-  <button type="button" className="kk alt" aria-label="Effacer (appui long : tout effacer)"
-   onPointerDown={down} onPointerUp={up} onPointerLeave={cancel} onPointerCancel={cancel} onContextMenu={e=>e.preventDefault()}><Icon n="del" s={28}/></button>
-  {next&&<button type="button" className="kk nx" disabled={next.off} onClick={()=>{buzz(20);next.f()}}>{next.l}</button>}
+/** Saisie d'une valeur : le clavier du téléphone (numérique ou décimal) + un curseur à glisser.
+ *  `norm` permet de reformater la saisie (ex. 385 devient 38,5). `onFull` est appelé quand le nombre de chiffres max est tapé. */
+export function Entry({l,u,v,on,dec=false,max=4,ph='0',norm,sl,inputRef,onEnter,onFull}:{l:string;u?:string;v:string;on:(s:string)=>void;dec?:boolean;max?:number;ph?:string;norm?:(s:string)=>string;sl?:SL;inputRef?:Ref<HTMLInputElement>;onEnter?:()=>void;onFull?:()=>void}){
+ const change=(raw:string)=>{
+  let t=clean(raw,dec,max);if(norm)t=norm(t)
+  on(t)
+  if(onFull&&t.replace(',','').length>=max)onFull()}
+ const x=num(v)
+ return <div className="entw">
+  <label className="ent"><span className="dl">{l}</span>
+   <input ref={inputRef} inputMode={dec?'decimal':'numeric'} enterKeyHint={onEnter?'next':'done'} autoComplete="off" autoCorrect="off" spellCheck={false} aria-label={u?`${l} (${u})`:l}
+    value={v} placeholder={ph} onChange={e=>change(e.target.value)}
+    onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();if(onEnter)onEnter();else (e.target as HTMLInputElement).blur()}}}/>
+   {u&&<em>{u}</em>}</label>
+  {sl&&<Slider l={sl.l} u={u} min={sl.min} max={sl.max} step={sl.step} def={sl.def} v={Number.isFinite(x)&&v!==''?x:null} on={on}/>}
  </div>}
 
-/** Affichage de la valeur en cours de saisie (grand, lisible à bout de bras) */
-function Disp({l,v,u,ph='0',act,onTap}:{l:string;v:string;u?:string;ph?:string;act?:boolean;onTap?:()=>void}){
- return <button type="button" className={'dsp'+(act?' act':'')+(v?'':' ph')} aria-pressed={act} aria-label={`${l} : ${v||'vide'}`} onClick={onTap}>
-  <span className="dl">{l}</span><b>{v||ph}</b>{u&&<em>{u}</em>}</button>}
+/** Réglage discret : une ligne (libellé + valeur), la liste native s'ouvre au toucher. */
+export function Pick<T extends string>({l,v,on,o,off}:{l:string;v:T;on:(t:T)=>void;o:[T,string,string][];off?:boolean}){
+ const cur=o.find(x=>x[0]===v)
+ return <label className={'pk'+(off?' off':'')}><span className="pl">{l}</span><b>{cur?.[1]}</b><span className="pc" aria-hidden="true"><Icon n="chev" s={16}/></span>
+  <select value={v} disabled={off} onChange={e=>on(e.target.value as T)}>{o.map(([k,,t])=><option key={k} value={k}>{t}</option>)}</select></label>}
+const two=<T extends string>(o:[T,string][])=>o.map(([k,t])=>[k,t,t] as [T,string,string])
 
 const Live=({children}:{children?:ReactNode})=><div className="live" aria-live="polite">{children}</div>
 const Hint=({t}:{t:string})=><p className="hnt lv">{t}</p>
@@ -121,25 +114,24 @@ function paClass(S:number,D:number):[Tone,string,string]{
  return['ok','Pression optimale','Dans la plage habituelle de l\'adulte.']}
 
 export function PA({rd,add,del}:VP){
- const[sys,setSys]=useState(''),[dia,setDia]=useState(''),[f,setF]=useState<'s'|'d'>('s'),[saved,flash]=useSaved()
+ const[sys,setSys]=useState(''),[dia,setDia]=useState(''),[saved,flash]=useSaved()
+ const dr=useRef<HTMLInputElement>(null)
  const S=num(sys),D=num(dia)
  const okS=Number.isFinite(S)&&S>0,okD=Number.isFinite(D)&&D>0
  const has=okS&&okD&&S>D,bad=okS&&okD&&S<=D
  const odd=has&&(S<50||S>300||D<20||D>200)
- const edit=(s:string)=>{if(f==='s'){setSys(s);if(s.length===3)setF('d')}else setDia(s)}
- const save=()=>{add({k:'pa',v:S,d:D,m:'manuel'});setSys('');setDia('');setF('s');flash()}
- const next:Next=f==='s'?{l:'Diastolique',f:()=>setF('d'),off:!okS}:{l:'Enregistrer',f:save,off:!has}
+ const save=()=>{add({k:'pa',v:S,d:D,m:'manuel'});setSys('');setDia('');flash()}
  const v=has?paClass(S,D):null,M=has?Math.round((S+2*D)/3):0
  return <Shell doc={PADOC}><div className="frm">
-  <div className="dsps"><Disp l="Systolique" u="mmHg" v={sys} act={f==='s'} onTap={()=>setF('s')}/><span className="sl" aria-hidden="true">/</span>
-   <Disp l="Diastolique" u="mmHg" v={dia} act={f==='d'} onTap={()=>setF('d')}/></div>
+  <Entry l="Systolique" u="mmHg" v={sys} on={setSys} max={3} sl={{min:60,max:240,step:1,def:120}} onFull={()=>dr.current?.focus()} onEnter={()=>dr.current?.focus()}/>
+  <Entry l="Diastolique" u="mmHg" v={dia} on={setDia} max={3} sl={{min:30,max:140,step:1,def:80}} inputRef={dr}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has&&v?<><Verdict tone={v[0]} t={v[1]}>{odd?'Valeur inhabituelle : vérifie la saisie. ':''}{v[2]}</Verdict>
     <Scale min={60} max={260} v={S} seg={[{to:90,t:'ko',l:'<90'},{to:120,t:'ok',l:'90–119'},{to:140,t:'in',l:'120–139'},{to:180,t:'wa',l:'140–179'},{to:260,t:'ko',l:'≥180'}]}/>
     <Sub t={`PAM ${M} mmHg · pression pulsée ${S-D} mmHg`}/></>
    :bad?<Verdict tone="wa" t="Systolique et diastolique à vérifier">La pression systolique doit être supérieure à la diastolique.</Verdict>
-   :<Hint t="Systolique d'abord (3 chiffres : passage automatique), puis diastolique. Seuils de l'adulte."/>}</Live>
-  <Keypad v={f==='s'?sys:dia} on={edit} max={3} next={next}/></div>
+   :<Hint t="Tape la systolique puis la diastolique, ou fais glisser les curseurs. Seuils de l'adulte."/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="pa" rd={rd} del={del} main={r=><>{r.v}/{r.d}<small> mmHg</small></>} sub={r=>`PAM ${Math.round((r.v+2*(r.d??0))/3)}`}/></Shell>}
 
 /* ====== Température ====== */
@@ -187,15 +179,16 @@ export function Temp({rd,add,del}:VP){
  const save=()=>{add({k:'t',v:c,m:'manuel',a:site});setRaw('');flash()}
  const other=u==='C'?`${fx(c*9/5+32,1)} °F`:`${fx(c,1)} °C`
  return <Shell doc={TDOC}><div className="frm">
-  <div className="opts"><Pills l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={[['C','°C'],['F','°F']]}/>
-   <Pills l="Site de mesure" v={site} on={setSite} o={SITES}/></div>
-  <div className="dsps one"><Disp l="Température" u={u==='C'?'°C':'°F'} v={tShow(raw,u)} ph={u==='C'?'37,0':'98,6'} act/></div>
+  <div className="opts two"><Pick l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={two<'C'|'F'>([['C','°C'],['F','°F']])}/>
+   <Pick l="Site de mesure" v={site} on={setSite} o={two(SITES)}/></div>
+  <Entry l="Température" u={u==='C'?'°C':'°F'} v={raw} on={setRaw} dec max={4} ph={u==='C'?'37,0':'98,6'} norm={t=>tShow(t,u)}
+   sl={u==='C'?{min:34,max:42,step:.1,def:37}:{min:93,max:108,step:.1,def:98.6}}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has&&v?<><Verdict tone={v[0]} t={v[1]}>{odd?'Valeur inhabituelle : vérifie la saisie. ':''}{v[2]}</Verdict>
     <Scale min={33} max={42} v={c} seg={[{to:35,t:'ko',l:'<35'},{to:36,t:'in',l:'35–36'},{to:37.5,t:'ok',l:'36–37,5'},{to:38,t:'in',l:'\u00a0'},{to:40,t:'wa',l:'38–39,9'},{to:42,t:'ko',l:'≥40'}]}/>
     <Sub t={`Équivalent : ${other}`}/></>
-   :<Hint t={u==='C'?'Tape les chiffres sans virgule : 385 devient 38,5.':'Tape les chiffres sans virgule : 1004 devient 100,4.'}/>}</Live>
-  <Keypad v={raw} on={setRaw} dec max={u==='C'?3:4} next={{l:'Enregistrer',f:save,off:!has}}/></div>
+   :<Hint t={u==='C'?'Tape les chiffres sans virgule (385 devient 38,5) ou fais glisser le curseur.':'Tape les chiffres sans virgule (1004 devient 100,4) ou fais glisser le curseur.'}/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="t" rd={rd} del={del} main={r=><>{fx(r.v,1)}<small> °C</small></>} sub={r=>r.a??''}/></Shell>}
 
 /* ====== SpO2 ====== */
@@ -208,16 +201,15 @@ const SPDOC:Doc={
  limits:['L\'oxymètre peut surestimer la saturation chez les patients à peau foncée : une valeur rassurante ne prime pas sur une clinique inquiétante.','Fausses lectures : extrémités froides, état de choc, mouvements, vernis, intoxication au monoxyde de carbone (valeur faussement normale).','Ne renseigne ni la ventilation (CO₂) ni le contenu en oxygène du sang (anémie).','Les cibles dépendent du patient et du protocole du service : vérifie avant d\'agir.'],
  refs:['O\'Driscoll BR et al. BTS guideline for oxygen use in adults in healthcare and emergency settings. Thorax 2017;72(Suppl 1):ii1-ii90.','Sjoding MW et al. Racial bias in pulse oximetry measurement. N Engl J Med 2020;383:2477-2478.']}
 const spTone=(n:number):Tone=>n>=95?'ok':n>=90?'wa':'ko'
-const SPV=Array.from({length:16},(_,i)=>100-i)
 
 export function SpO2({rd,add,del}:VP){
- const[raw,setRaw]=useState(''),[ctx,setCtx]=usePref<'air'|'o2'>('spc','air'),[key,setKey]=useState(false),[saved,flash]=useSaved()
+ const[raw,setRaw]=useState(''),[ctx,setCtx]=usePref<'air'|'o2'>('spc','air'),[saved,flash]=useSaved()
  const n=Math.round(num(raw)),has=Number.isFinite(n)&&n>=1&&n<=100,over=Number.isFinite(n)&&n>100
- const save=()=>{add({k:'spo2',v:n,m:'manuel',a:ctx});setRaw('');setKey(false);flash()}
+ const save=()=>{add({k:'spo2',v:n,m:'manuel',a:ctx});setRaw('');flash()}
  const t=has?spTone(n):'in'
  return <Shell doc={SPDOC}><div className="frm">
-  <div className="opts"><Pills l="Conditions" v={ctx} on={setCtx} o={[['air','Air ambiant'],['o2','Sous O₂']]}/></div>
-  <div className="dsps one"><Disp l="SpO₂" u="%" v={raw} act={key} onTap={()=>setKey(true)}/></div>
+  <div className="opts"><Pick l="Conditions" v={ctx} on={setCtx} o={two<'air'|'o2'>([['air','Air ambiant'],['o2','Sous O₂']])}/></div>
+  <Entry l="SpO₂" u="%" v={raw} on={setRaw} max={3} sl={{min:70,max:100,step:1,def:95}}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has?<><Verdict tone={t} t={n>=95?'Saturation normale':n>=90?'Saturation basse':'Hypoxémie'}>
     {n<70?'Valeur très basse : vérifie le capteur et la qualité du signal. ':''}
@@ -226,14 +218,8 @@ export function SpO2({rd,add,del}:VP){
      :'Évaluation clinique immédiate : voies aériennes, respiration, circulation. Vérifier la qualité du signal (doigt chaud, propre, immobile).'}{ctx==='o2'?' Noter le débit ou le dispositif d\'oxygène dans l\'observation.':''}</Verdict>
     <Scale min={80} max={100} v={n} seg={[{to:90,t:'ko',l:'<90'},{to:95,t:'wa',l:'90–94'},{to:100,t:'ok',l:'≥95'}]}/></>
    :over?<Verdict tone="wa" t="Valeur impossible">La SpO₂ ne peut pas dépasser 100 %.</Verdict>
-   :<Hint t="Touche la valeur lue sur l'oxymètre, ou utilise « Autre valeur »."/>}</Live>
-  {!key?<>
-   <div className="chps sp4" role="group" aria-label="Valeur lue sur l'oxymètre">{SPV.map(x=>
-    <button key={x} type="button" className={'chp t-'+spTone(x)+(has&&n===x?' on':'')} aria-pressed={has&&n===x} onClick={()=>{buzz();setRaw(String(x))}}>{x}</button>)}</div>
-   <button type="button" className="lnk" onClick={()=>{setKey(true);setRaw('')}}>Autre valeur</button>
-   {has&&<button type="button" className="save" onClick={save}>Enregistrer la mesure</button>}</>
-  :<><Keypad v={raw} on={setRaw} max={3} next={{l:'Enregistrer',f:save,off:!has}}/>
-   <button type="button" className="lnk" onClick={()=>{setKey(false);setRaw('')}}>Revenir aux valeurs rapides</button></>}</div>
+   :<Hint t="Tape la valeur lue sur l'oxymètre, ou fais glisser le curseur."/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="spo2" rd={rd} del={del} main={r=><>{r.v}<small> %</small></>} sub={r=>r.a==='o2'?'sous O₂':'air ambiant'}/></Shell>}
 
 /* ====== Poids ====== */
@@ -255,14 +241,14 @@ export function Poids({rd,add,del}:VP){
  const save=()=>{add({k:'poids',v:Math.round(w*100)/100,m:'manuel'});setRaw('');flash()}
  const dl=has&&prev?w-prev.v:NaN
  return <Shell doc={PODOC}><div className="frm">
-  <div className="dsps one"><Disp l="Poids" u="kg" v={raw} ph="0,0" act/></div>
+  <Entry l="Poids" u="kg" v={raw} on={setRaw} dec max={4} ph="0,0" sl={{min:1,max:150,step:.1,def:70}}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has?<>{odd&&<Verdict tone="wa" t="Valeur inhabituelle">Vérifie la saisie : le poids attendu se situe entre 0,3 et 400 kg.</Verdict>}
     {cat&&!odd?<Verdict tone={cat.tone} t={`IMC ${fx(imc)} kg/m² · ${cat.k}`}>Calculé avec la dernière taille enregistrée ({ds(ht!.v)} cm). Valable pour l'adulte.</Verdict>
      :!odd&&<Hint t="Aucune taille enregistrée : l'IMC apparaîtra dès qu'elle l'est."/>}
     {Number.isFinite(dl)&&<Sub t={`Écart avec la dernière mesure : ${dl>0?'+':''}${fx(dl,1)} kg`}/>}</>
-   :<Hint t="Poids en kilogrammes. Une virgule pour les décimales (nourrisson : 3,4)."/>}</Live>
-  <Keypad v={raw} on={setRaw} dec max={4} next={{l:'Enregistrer',f:save,off:!has}}/></div>
+   :<Hint t="Poids en kilogrammes. Une virgule pour les décimales (nourrisson : 3,4), ou fais glisser le curseur."/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="poids" rd={rd} del={del} main={r=><>{ds(r.v)}<small> kg</small></>}/></Shell>}
 
 /* ====== Taille ====== */
@@ -284,15 +270,15 @@ export function Taille({rd,add,del}:VP){
  const imc=has&&pw?imcOf(pw.v,cm):NaN,cat=Number.isFinite(imc)?imcCat(imc):null
  const save=()=>{add({k:'taille',v:Math.round(cm*10)/10,m:'manuel'});setRaw('');flash()}
  return <Shell doc={TADOC}><div className="frm">
-  <div className="opts"><Pills l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={[['cm','Centimètres'],['m','Mètres']]}/></div>
-  <div className="dsps one"><Disp l="Taille" u={u} v={raw} ph={u==='cm'?'170':'1,70'} act/></div>
+  <div className="opts"><Pick l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={two<'cm'|'m'>([['cm','Centimètres'],['m','Mètres']])}/></div>
+  <Entry l="Taille" u={u} v={raw} on={setRaw} dec={u==='m'} max={3} ph={u==='cm'?'170':'1,70'} sl={u==='cm'?{min:40,max:220,step:1,def:170}:{min:.4,max:2.2,step:.01,def:1.7}}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has?<>{odd?<Verdict tone="wa" t="Valeur inhabituelle">Vérifie la saisie : la taille attendue se situe entre 40 et 230 cm.</Verdict>
     :cat?<Verdict tone={cat.tone} t={`IMC ${fx(imc)} kg/m² · ${cat.k}`}>Calculé avec le dernier poids enregistré ({ds(pw!.v)} kg). Valable pour l'adulte.</Verdict>
     :<Hint t="Aucun poids enregistré : l'IMC apparaîtra dès qu'il l'est."/>}
     <Sub t={`${fx(cm,0)} cm = ${fx(cm/100,2)} m`}/></>
-   :<Hint t={u==='cm'?'Taille en centimètres, par exemple 172.':'Taille en mètres, par exemple 1,72.'}/>}</Live>
-  <Keypad v={raw} on={setRaw} dec={u==='m'} max={3} next={{l:'Enregistrer',f:save,off:!has}}/></div>
+   :<Hint t={u==='cm'?'Taille en centimètres, par exemple 172, ou fais glisser le curseur.':'Taille en mètres, par exemple 1,72, ou fais glisser le curseur.'}/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="taille" rd={rd} del={del} main={r=><>{ds(r.v)}<small> cm</small></>}/></Shell>}
 
 /* ====== Glycémie ====== */
@@ -335,13 +321,14 @@ export function Glyc({rd,add,del}:VP){
  const save=()=>{add({k:'glyc',v:Math.round(g*100)/100,m:'manuel',a:c});setRaw('');flash()}
  const all=has?`${fx(g,2)} g/L · ${fx(g*100,0)} mg/dL · ${fx(g/0.1802,1)} mmol/L`:''
  return <Shell doc={GDOC}><div className="frm">
-  <div className="opts"><Pills l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={GUN}/>
-   <Pills l="Moment" v={c} on={setC} o={GCN}/></div>
-  <div className="dsps one"><Disp l="Glycémie" u={GUN.find(a=>a[0]===u)![1]} v={raw} ph={u==='gl'?'1,00':u==='mg'?'100':'5,5'} act/></div>
+  <div className="opts two"><Pick l="Unité" v={u} on={x=>{setU(x);setRaw('')}} o={two(GUN)}/>
+   <Pick l="Moment" v={c} on={setC} o={two(GCN)}/></div>
+  <Entry l="Glycémie" u={GUN.find(a=>a[0]===u)![1]} v={raw} on={setRaw} dec={u!=='mg'} max={4} ph={u==='gl'?'1,00':u==='mg'?'100':'5,5'}
+   sl={u==='gl'?{min:.2,max:4,step:.01,def:1}:u==='mg'?{min:20,max:400,step:1,def:100}:{min:1,max:22,step:.1,def:5.5}}/>
   <Live>{saved?<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>
    :has&&v?<><Verdict tone={v[0]} t={v[1]}>{odd?'Valeur inhabituelle : vérifie la saisie et l\'unité. ':''}{v[2]}</Verdict><Sub t={all}/></>
-   :<Hint t="Choisis l'unité du lecteur et le moment de la mesure, puis tape la valeur."/>}</Live>
-  <Keypad v={raw} on={setRaw} dec max={4} next={{l:'Enregistrer',f:save,off:!has}}/></div>
+   :<Hint t="Choisis l'unité du lecteur et le moment de la mesure, puis tape la valeur ou fais glisser le curseur."/>}</Live>
+  <button type="button" className="save" disabled={!has} onClick={save}>Enregistrer la mesure</button></div>
   <Hist k="glyc" rd={rd} del={del} main={r=><>{fx(r.v,2)}<small> g/L</small></>} sub={r=>r.a==='repas'?'après repas':r.a==='hasard'?'au hasard':'à jeun'}/></Shell>}
 
 /* ====== Observation clinique ====== */
