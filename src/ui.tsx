@@ -18,6 +18,7 @@ const P:Record<string,string>={
  calc:'M6 3h12v18H6zM9 7h6M9 11h1M14 11h1M9 15h1M14 15h1M9 18h6',
  pulse:'M3 12h4l2-6 4 12 2-6h6',
  chev:'M9 5l7 7-7 7',
+ del:'M21 5H9l-6 7 6 7h12zM12 9.5l5 5M17 9.5l-5 5',
  branch:'M5 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0M15 5a2 2 0 1 0 4 0a2 2 0 1 0-4 0M15 19a2 2 0 1 0 4 0a2 2 0 1 0-4 0M8.8 11L15.2 6M8.8 13L15.2 18'}
 export const Icon=({n,s=22}:{n:string;s?:number})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[n]}/></svg>
 
