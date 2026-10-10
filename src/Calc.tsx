@@ -6,21 +6,21 @@ import * as C from './calcdata'
 import type {Tone,Doc} from './calcdata'
 
 /* ====== Briques d'interface ====== */
-function Num({l,u,v,on,ph}:{l:string;u?:string;v:string;on:(s:string)=>void;ph?:string}){
+export function Num({l,u,v,on,ph}:{l:string;u?:string;v:string;on:(s:string)=>void;ph?:string}){
  return <label className="fld nf">{l}<span className="inw"><input inputMode="decimal" autoComplete="off" value={v} placeholder={ph} onChange={e=>on(e.target.value)}/>{u&&<em>{u}</em>}</span></label>}
 function Day({l,v,on}:{l:string;v:string;on:(s:string)=>void}){
  return <label className="fld">{l}<input type="date" value={v} onChange={e=>on(e.target.value)}/></label>}
-function Pills<T extends string>({l,v,on,o}:{l?:string;v:T;on:(t:T)=>void;o:[T,string][]}){
+export function Pills<T extends string>({l,v,on,o}:{l?:string;v:T;on:(t:T)=>void;o:[T,string][]}){
  return <div className="fld">{l}<div className="pills">{o.map(([k,t])=><button key={k} type="button" className={v===k?'on':''} aria-pressed={v===k} onClick={()=>on(k)}>{t}</button>)}</div></div>}
-function Res({k,big,unit,line}:{k:string;big:string;unit?:string;line?:string}){
+export function Res({k,big,unit,line}:{k:string;big:string;unit?:string;line?:string}){
  return <div className="res" aria-live="polite"><span className="rk">{k}</span><div className="rv">{big}{unit&&<small>{unit}</small>}</div>{line&&<p>{line}</p>}</div>}
-function Verdict({tone,t,children}:{tone:Tone;t:string;children?:ReactNode}){
+export function Verdict({tone,t,children}:{tone:Tone;t:string;children?:ReactNode}){
  return <div className={'vd t-'+tone}><b>{t}</b>{children&&<p>{children}</p>}</div>}
-function KV({rows}:{rows:[string,string][]}){
+export function KV({rows}:{rows:[string,string][]}){
  return <dl className="kv">{rows.map(([a,b])=><div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>}
-const Empty=({t}:{t:string})=><div className="emp">{t}</div>
+export const Empty=({t}:{t:string})=><div className="emp">{t}</div>
 type Seg={to:number;t:Tone;l:string}
-function Scale({seg,min,max,v}:{seg:Seg[];min:number;max:number;v:number}){
+export function Scale({seg,min,max,v}:{seg:Seg[];min:number;max:number;v:number}){
  let p=min
  const pos=Math.min(1,Math.max(0,(v-min)/(max-min)))*100
  return <div className="sc" role="img" aria-label="Position du résultat sur l'échelle"><div className="bar">
@@ -203,7 +203,7 @@ function Conv(){
 const FORMS:Record<string,()=>JSX.Element>={ga:GA,dpa:DPA,imc:IMC,apgar:Apgar,bishop:Bishop,choc:Choc,pp:PP,conv:Conv}
 
 /* ====== Explications ====== */
-function Learn({doc}:{doc:Doc}){
+export function Learn({doc}:{doc:Doc}){
  return <div>
   <section className="lc"><h3 className="lh">À quoi ça sert</h3><ul>{doc.use.map(x=><li key={x}>{x}</li>)}</ul></section>
   <section className="lc"><h3 className="lh">Formule</h3><pre className="eq">{doc.eq.join('\n')}</pre>
@@ -251,11 +251,4 @@ export default function Calc(){
    <div className="crows">{list.map((c,i)=><motion.button key={c.id} className="crow" initial={{y:12,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.04*i}} onClick={()=>open(c.id)}>
      <span className="cd" aria-hidden="true">{c.code}</span><span className="tx"><b>{c.name}</b><small>{c.sub}</small></span><Icon n="chev" s={18}/></motion.button>)}</div>
    {disc}</div></div>
-}
-
-export function Follow(){
- return <div className="page"><div className="top"><div><small>Paramètres vitaux</small><h1>Suivi</h1></div></div>
-  <div className="cx"><div className="emp"><b>Bientôt</b>
-   <p>Tu pourras enregistrer les mesures sur l'appareil, sans les recopier ailleurs.</p>
-   <div className="tags">{['FC','FR','Pression artérielle','Température','SpO₂','Poids','Taille','Glycémie','Observation'].map(x=><span key={x}>{x}</span>)}</div></div></div></div>
 }
