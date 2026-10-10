@@ -6,6 +6,8 @@ import {Icon,Tilt} from './ui'
 import Splash3D from './Splash3D'
 import Calc from './Calc'
 import Vitals from './Vitals'
+import {useBackLayer} from './nav'
+import {BRAND,HOME_URL,LINKS} from './brand'
 export interface Prog{st:Record<number,'k'|'n'|'d'>;fav:Record<number,boolean>}
 type Role='Interne'|'Résident'|'Étudiant'; interface Profile{name:string;role:Role}
 type Theme='auto'|'light'|'dark'; type Tab='home'|'study'|'calc'|'follow'|'me'
@@ -20,6 +22,7 @@ function Splash({first,onDone}:{first:boolean;onDone:()=>void}){
    <Splash3D/><span>L</span></motion.div>
   <motion.h1 initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.4}}>l'interne</motion.h1>
   <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.7}}>Ta révision médicale,<br/>fluide comme un swipe.</motion.p>
+  <motion.small className="by" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.9}}>Un projet {BRAND.name}</motion.small>
   {first&&<motion.button className="cta" onClick={onDone} initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:1}}>Commencer</motion.button>}
  </motion.div>
 }
@@ -44,6 +47,14 @@ function Ring({v}:{v:number}){
   <b>{v}%</b></div>
 }
 
+/** Marque de l'organisation : un clic ouvre son site (ou son GitHub), avec ses liens officiels. */
+function Brand(){
+ return <footer className="brand">
+  <a className="bl" href={HOME_URL} target="_blank" rel="noopener noreferrer"><b>{BRAND.name}</b><span>{BRAND.tag}</span></a>
+  <div className="bk">{LINKS.map(([n,u])=><a key={n} className="bm" href={u} target="_blank" rel="noopener noreferrer">{n}</a>)}</div>
+ </footer>
+}
+
 function Home({me,p,go,tool,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>void;tool:(t:Tab)=>void;theme:Theme;setTheme:()=>void}){
  const g=MODULES[0].cards!,known=g.filter(c=>p.st[c.id]==='k').length,pc=Math.round(known/g.length*100)
  const h=new Date().getHours(),hi=h<5||h>=18?'Bonsoir':'Bonjour'
@@ -54,7 +65,7 @@ function Home({me,p,go,tool,theme,setTheme}:{me:Profile;p:Prog;go:(m:Module)=>vo
    <Ring v={pc}/>
    <div><h3>Continuer la révision</h3><p>{MODULES[0].name}<br/>{known} sur {g.length} fiches retenues</p></div></Tilt>
   <h2 className="sec">Modules</h2>
-  <div className="grid">{MODULES.map((m,i)=><motion.div key={m.key} initial={{y:16,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.08+i*.05}}>
+  <div className="grid">{MODULES.map((m,i)=><motion.div key={m.key} initial={{y:16}} animate={{y:0}} transition={{delay:.08+i*.05}}>
    <Tilt className={'mod'+(m.cards?'':' lock')} disabled={!m.cards} onClick={()=>m.cards&&go(m)}>
     <div className="em" aria-hidden="true">{m.code}</div><h4>{m.name}</h4><small>{m.sub}</small>{!m.cards&&<span className="lk"><Icon n="lock" s={16}/></span>}</Tilt></motion.div>)}</div>
   <h2 className="sec">Outils</h2>
@@ -68,7 +79,8 @@ function Me({me,setMe,theme,setTheme,reset}:{me:Profile;setMe:(p:Profile)=>void;
   <label className="fld">Nom<input value={me.name} onChange={e=>setMe({...me,name:e.target.value})}/></label>
   <div className="fld">Statut<div className="pills">{ROLES.map(r=><button key={r} className={me.role===r?'on':''} aria-pressed={me.role===r} onClick={()=>setMe({...me,role:r})}>{r}</button>)}</div></div>
   <div className="fld">Thème<div className="pills">{(['auto','light','dark'] as Theme[]).map(t=><button key={t} className={theme===t?'on':''} aria-pressed={theme===t} onClick={()=>setTheme(t)}>{t==='auto'?'Auto':t==='light'?'Clair':'Sombre'}</button>)}</div></div>
-  <button className="danger" onClick={()=>confirm('Effacer toute ta progression ?')&&reset()}>Réinitialiser la progression</button></div>
+  <button className="danger" onClick={()=>confirm('Effacer toute ta progression ?')&&reset()}>Réinitialiser la progression</button>
+  <Brand/></div>
 }
 
 export default function App(){
@@ -77,21 +89,24 @@ export default function App(){
  const [splash,setSplash]=useState(true),[tab,setTab]=useState<Tab>('home'),[mod,setMod]=useState<Module>(MODULES[0])
  useEffect(()=>{const r=document.documentElement;theme==='auto'?r.removeAttribute('data-theme'):r.setAttribute('data-theme',theme)},[theme])
  const cycle=()=>setTheme(theme==='dark'?'light':'dark')
+ const [nonce,setNonce]=useState(0)
+ useBackLayer(!splash&&!!me&&tab!=='home',()=>setTab('home'))
+ const goTab=(k:Tab)=>{if(k===tab)setNonce(n=>n+1);else setTab(k)}
  const nav:[Tab,string,string][]=[['home','home','Accueil'],['study','cards','Résumés'],['calc','calc','Calculs'],['follow','pulse','Suivi'],['me','user','Profil']]
  return <div className="stage"><div className="device">
   <div className="bgfx" aria-hidden="true"><i/><i/><i/></div>
   <AnimatePresence>{splash&&<Splash key="s" first={!seen} onDone={()=>{setSeen(true);setSplash(false)}}/>}</AnimatePresence>
   {!splash&&!me&&<Onboard onSave={setMe}/>}
   {!splash&&me&&<>
-   <AnimatePresence mode="wait"><motion.main key={tab} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.2}}>
+   <motion.main key={tab+'-'+nonce} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{duration:.2}}>
     {tab==='home'&&<Home me={me} p={p} theme={theme} setTheme={cycle} tool={setTab} go={m=>{setMod(m);setTab('study')}}/>}
     {tab==='study'&&<div className="page"><div className="top"><div><small>Module</small><h1 className="sm">{mod.name}</h1></div><button className="ib" onClick={()=>setTab('home')} aria-label="Retour"><Icon n="back"/></button></div>
      <Study cards={mod.cards!} p={p} setP={f=>setP(f)} onHome={()=>setTab('home')}/></div>}
     {tab==='calc'&&<Calc/>}
     {tab==='follow'&&<Vitals/>}
     {tab==='me'&&<Me me={me} setMe={setMe} theme={theme} setTheme={setTheme} reset={()=>setP({st:{},fav:{}})}/>}
-   </motion.main></AnimatePresence>
-   <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>setTab(k)}>
+   </motion.main>
+   <nav className="tabbar" aria-label="Navigation principale">{nav.map(([k,i,l])=><button key={k} className={tab===k?'on':''} aria-label={l} aria-current={tab===k?'page':undefined} onClick={()=>goTab(k)}>
     {tab===k&&<motion.i layoutId="tab"/>}<Icon n={i}/><span>{l}</span></button>)}</nav></>}
  </div></div>
 }
