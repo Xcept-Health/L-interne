@@ -12,8 +12,8 @@ function Day({l,v,on}:{l:string;v:string;on:(s:string)=>void}){
  return <label className="fld">{l}<input type="date" value={v} onChange={e=>on(e.target.value)}/></label>}
 export function Pills<T extends string>({l,v,on,o}:{l?:string;v:T;on:(t:T)=>void;o:[T,string][]}){
  return <div className="fld">{l}<div className="pills">{o.map(([k,t])=><button key={k} type="button" className={v===k?'on':''} aria-pressed={v===k} onClick={()=>on(k)}>{t}</button>)}</div></div>}
-export function Res({k,big,unit,line}:{k:string;big:string;unit?:string;line?:string}){
- return <div className="res" aria-live="polite"><span className="rk">{k}</span><div className="rv">{big}{unit&&<small>{unit}</small>}</div>{line&&<p>{line}</p>}</div>}
+export function Res({k,big,unit,line,warn}:{k:string;big:string;unit?:string;line?:string;warn?:string}){
+ return <div className="res" aria-live="polite"><span className="rk">{k}</span><div className="rv">{big}{unit&&<small>{unit}</small>}</div>{line&&<p>{line}</p>}{warn&&<p className="wn"><i/>{warn}</p>}</div>}
 export function Verdict({tone,t,children}:{tone:Tone;t:string;children?:ReactNode}){
  return <div className={'vd t-'+tone}><b>{t}</b>{children&&<p>{children}</p>}</div>}
 export function KV({rows}:{rows:[string,string][]}){
@@ -21,11 +21,13 @@ export function KV({rows}:{rows:[string,string][]}){
 export const Empty=({t}:{t:string})=><div className="emp">{t}</div>
 type Seg={to:number;t:Tone;l:string}
 export function Scale({seg,min,max,v}:{seg:Seg[];min:number;max:number;v:number}){
- let p=min
  const pos=Math.min(1,Math.max(0,(v-min)/(max-min)))*100
- return <div className="sc" role="img" aria-label="Position du résultat sur l'échelle"><div className="bar">
-  {seg.map(s=>{const w=s.to-p;p=s.to;return <i key={s.l} className={'t-'+s.t} style={{flex:`${w} 1 0`}}>{s.l}</i>})}
-  <span className="mk" style={{left:pos+'%'}}/></div></div>}
+ let p=min
+ const parts=seg.map(x=>{const w=x.to-p;p=x.to;return {...x,w}})
+ const k=parts.findIndex(x=>v<=x.to),cur=parts[k<0?parts.length-1:k]
+ return <div className="sc" role="img" aria-label={`Position du résultat sur l'échelle : ${cur.l}`}>
+  <div className="bar">{parts.map(x=><i key={x.l} className={'t-'+x.t+(x===cur?' on':'')} style={{flex:`${x.w} 1 0`}}/>)}<span className="mk" style={{left:pos+'%'}}/></div>
+  <div className="lb" aria-hidden="true">{parts.map(x=><span key={x.l} className={x===cur?'on':''} style={{flex:`${x.w} 1 0`}}>{x.l}</span>)}</div></div>}
 function Choice({l,o,v,on}:{l:string;o:{p:number;t:string}[];v:number|null;on:(p:number)=>void}){
  return <fieldset className="ch"><legend>{l}</legend><div className="os">
   {o.map(x=><button key={x.t} type="button" className={'op'+(v===x.p?' on':'')} aria-pressed={v===x.p} onClick={()=>on(x.p)}><b>{x.p}</b><span>{x.t}</span></button>)}</div></fieldset>}
