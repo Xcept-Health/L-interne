@@ -3,7 +3,8 @@ import {Icon,Tilt} from './ui'
 import {Empty,KV,Learn,Res,Scale,Verdict} from './Calc'
 import {num} from './calcdata'
 import type {Doc,Tone} from './calcdata'
-import {Glyc,Obs,PA,Poids,SpO2,Taille,Temp,fmtR} from './vitalsParams'
+import {Entry,Pick,Glyc,Obs,PA,Poids,SpO2,Taille,Temp,fmtR} from './vitalsParams'
+import {useBackLayer} from './nav'
 
 /* ====== Données ======
  * Ajouter un paramètre : l'ajouter dans PARAMS (on:true), créer son écran
@@ -49,12 +50,6 @@ const FCDOC:Doc={
 const signal=(c:AudioContext|null)=>{
  try{navigator.vibrate?.([220,90,220])}catch{}
  try{if(!c)return;const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.value=.18;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.4)}catch{}}
-
-/** Réglage discret : une ligne (libellé + valeur), la liste native s'ouvre au toucher. */
-function Pick<T extends string>({l,v,on,o,off}:{l:string;v:T;on:(t:T)=>void;o:[T,string,string][];off?:boolean}){
- const cur=o.find(x=>x[0]===v)
- return <label className={'pk'+(off?' off':'')}><span className="pl">{l}</span><b>{cur?.[1]}</b><span className="pc" aria-hidden="true"><Icon n="chev" s={16}/></span>
-  <select value={v} disabled={off} onChange={e=>on(e.target.value as T)}>{o.map(([k,,t])=><option key={k} value={k}>{t}</option>)}</select></label>}
 
 /* ====== Fréquence respiratoire ====== */
 /** Plages de repos, sujet éveillé (AHA PALS, Fleming 2011 ; arrondies) */
@@ -137,7 +132,7 @@ function Chrono({cfg,rd,add,del}:{cfg:Cfg;rd:Reading[];add:(r:NewR)=>void;del:(i
      {ph==='done'&&<><label className="bigl">{`${cfg.cnt} en ${D} s`}<input className="big" inputMode="numeric" autoFocus autoComplete="off" value={cnt} placeholder="0" onChange={e=>setCnt(e.target.value.replace(/\D/g,'').slice(0,3))}/></label>
       {cfg.tap&&taps>0&&<p className="hnt" style={{marginBottom:10}}>Total compté par appuis : corrige-le si besoin.</p>}
       <button type="button" className="rst ctr" onClick={reset}><Icon n="flip" s={16}/>Recommencer</button></>}
-    </>:<label className="bigl">{cfg.name} ({cfg.unit})<input className="big" inputMode="numeric" autoComplete="off" value={man} placeholder={cfg.ph} onChange={e=>setMan(e.target.value.replace(/[^\d]/g,'').slice(0,3))}/></label>}
+    </>:<Entry l={cfg.name} u={cfg.unit} v={man} on={setMan} max={3} ph={cfg.ph.replace('ex. ','')} sl={cfg.k==='fc'?{min:30,max:220,step:1,def:75}:{min:4,max:60,step:1,def:16}}/>}
     {ph==='idle'&&<button type="button" className="lnk" onClick={()=>setMode(mode==='chrono'?'manuel':'chrono')}>{mode==='chrono'?'Saisir la valeur à la main':'Utiliser le chronomètre'}</button>}
     {saved&&<Verdict tone="ok" t="Mesure enregistrée sur cet appareil"/>}
     {has?<div className="out">
@@ -163,8 +158,9 @@ export default function Vitals(){
  const add=(r:NewR)=>setRd(s=>[{...r,id:Date.now(),t:Date.now()},...s].slice(0,300))
  const del=(id:number)=>setRd(s=>s.filter(r=>r.id!==id))
  const p=PARAMS.find(x=>x.k===sel),pp={rd,add,del}
+ useBackLayer(!!p,()=>setSel(null))
  if(p){
-  return <div className="page"><div className="top"><div><small>Suivi</small><h1 className="sm">{p.n}</h1></div>
+  return <div key={'d-'+p.k} className="page"><div className="top"><div><small>Suivi</small><h1 className="sm">{p.n}</h1></div>
    <button className="ib" onClick={()=>setSel(null)} aria-label="Retour au suivi"><Icon n="back"/></button></div>
    <div className="cx">
     {p.k==='fc'&&<Chrono cfg={FC_CFG} {...pp}/>}
@@ -178,7 +174,7 @@ export default function Vitals(){
     {p.k==='obs'&&<Obs {...pp}/>}
    </div></div>}
  const recent=rd.slice(0,5)
- return <div className="page"><div className="top"><div><small>Paramètres vitaux</small><h1>Suivi</h1></div></div>
+ return <div key="list" className="page"><div className="top"><div><small>Paramètres vitaux</small><h1>Suivi</h1></div></div>
   <div className="cx"><div className="grid vg">{PARAMS.map(x=>{const last=rd.find(r=>r.k===x.k)
    return <Tilt key={x.k} className={'mod'+(x.on?'':' lock')} disabled={!x.on} onClick={()=>x.on&&setSel(x.k)}>
     <div className="em" aria-hidden="true">{x.code}</div><h4>{x.n}</h4>
