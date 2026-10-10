@@ -2,12 +2,17 @@ import {ReactNode,useState} from 'react'
 import {motion} from 'framer-motion'
 import {MODULES} from './data'
 import {Icon} from './ui'
+import Slider from './Slider'
+import type {SL} from './Slider'
+import {useBackLayer} from './nav'
 import * as C from './calcdata'
 import type {Tone,Doc} from './calcdata'
 
 /* ====== Briques d'interface ====== */
-export function Num({l,u,v,on,ph}:{l:string;u?:string;v:string;on:(s:string)=>void;ph?:string}){
- return <label className="fld nf">{l}<span className="inw"><input inputMode="decimal" autoComplete="off" value={v} placeholder={ph} onChange={e=>on(e.target.value)}/>{u&&<em>{u}</em>}</span></label>}
+export function Num({l,u,v,on,ph,sl}:{l:string;u?:string;v:string;on:(s:string)=>void;ph?:string;sl?:SL}){
+ const x=C.num(v)
+ return <div className="nfw"><label className="fld nf">{l}<span className="inw"><input inputMode="decimal" enterKeyHint="done" autoComplete="off" value={v} placeholder={ph} onChange={e=>on(e.target.value)}/>{u&&<em>{u}</em>}</span></label>
+  {sl&&<Slider l={sl.l} u={u} min={sl.min} max={sl.max} step={sl.step} def={sl.def} v={Number.isFinite(x)&&v!==''?x:null} on={on}/>}</div>}
 function Day({l,v,on}:{l:string;v:string;on:(s:string)=>void}){
  return <label className="fld">{l}<input type="date" value={v} onChange={e=>on(e.target.value)}/></label>}
 export function Pills<T extends string>({l,v,on,o}:{l?:string;v:T;on:(t:T)=>void;o:[T,string][]}){
@@ -87,8 +92,8 @@ function IMC(){
  const odd=ok&&(kg<20||kg>300||t<.5||t>2.5)
  const i=ok?kg/(t*t):NaN,c=ok?C.imcCat(i):null
  return <div className="frm">
-  <Num l="Poids" u="kg" v={w} on={setW} ph="ex. 62"/>
-  <Num l="Taille" u={u} v={h} on={setH} ph={u==='cm'?'ex. 165':'ex. 1,65'}/>
+  <Num l="Poids" u="kg" v={w} on={setW} ph="ex. 62" sl={{min:1,max:150,step:.5,def:65}}/>
+  <Num l="Taille" u={u} v={h} on={setH} ph={u==='cm'?'ex. 165':'ex. 1,65'} sl={u==='cm'?{min:40,max:220,step:1,def:165}:{min:.4,max:2.2,step:.01,def:1.65}}/>
   <Pills v={u} on={setU} o={[['cm','Centimètres'],['m','Mètres']]}/>
   {!ok||!c?<Empty t="Saisis le poids et la taille pour calculer l'IMC."/>
   :<>{odd&&<Verdict tone="wa" t="Valeur inhabituelle : vérifie le poids et la taille."/>}
@@ -148,8 +153,8 @@ function Choc(){
   :si<1?['wa','Alerte','Surveillance rapprochée, recherche d\'une hémorragie, application du protocole du service.']
   :['ko','État de choc probable','Prise en charge urgente selon le protocole du service.']
  return <div className="frm">
-  <Num l="Fréquence cardiaque" u="bpm" v={a} on={setA} ph="ex. 100"/>
-  <Num l="Pression artérielle systolique" u="mmHg" v={b} on={setB} ph="ex. 110"/>
+  <Num l="Fréquence cardiaque" u="bpm" v={a} on={setA} ph="ex. 100" sl={{min:40,max:180,step:1,def:90}}/>
+  <Num l="Pression artérielle systolique" u="mmHg" v={b} on={setB} ph="ex. 110" sl={{min:60,max:200,step:1,def:110}}/>
   {!ok?<Empty t="Saisis la FC et la PAS pour calculer l'indice de choc."/>
   :<>{odd&&<Verdict tone="wa" t="Valeur inhabituelle : vérifie la saisie."/>}
    <Res k="Indice de choc obstétrical" big={C.fx(si,2)}/>
@@ -238,9 +243,10 @@ export default function Calc(){
  const[sel,setSel]=useState<string|null>(null),[spec,setSpec]=useState('gyneco'),[tab,setTab]=useState<'c'|'u'>('c')
  const def=C.CALCS.find(c=>c.id===sel),mod=MODULES.find(m=>m.key===(def?.spec??spec))!
  const open=(id:string)=>{setSel(id);setTab('c')}
+ useBackLayer(!!def,()=>setSel(null))
  const disc=<p className="disc">Outil d'aide à l'apprentissage et au calcul : il ne remplace ni le jugement clinique ni les protocoles de ton service. Vérifie les seuils avec ton cours.</p>
  if(def){const F=FORMS[def.id]
-  return <div className="page"><div className="top"><div><small>{mod.name}</small><h1 className="sm">{def.name}</h1></div>
+  return <div key={'d-'+def.id} className="page"><div className="top"><div><small>{mod.name}</small><h1 className="sm">{def.name}</h1></div>
    <button className="ib" onClick={()=>setSel(null)} aria-label="Retour aux calculs"><Icon n="back"/></button></div>
    <div className="cx"><div className="seg">{([['c','Calculer'],['u','Comprendre']] as ['c'|'u',string][]).map(([k,l])=>
      <button key={k} className={tab===k?'on':''} onClick={()=>setTab(k)}>{tab===k&&<motion.i layoutId="cseg"/>}<span>{l}</span></button>)}</div>
@@ -248,9 +254,9 @@ export default function Calc(){
     <div className="cb" hidden={tab!=='u'}><Learn doc={def.doc}/></div>
     {disc}</div></div>}
  const list=C.CALCS.filter(c=>c.spec===spec)
- return <div className="page"><div className="top"><div><small>Outils cliniques</small><h1>Calculs</h1></div></div>
+ return <div key="list" className="page"><div className="top"><div><small>Outils cliniques</small><h1>Calculs</h1></div></div>
   <div className="cx"><SpecMenu spec={spec} setSpec={setSpec}/>
-   <div className="crows">{list.map((c,i)=><motion.button key={c.id} className="crow" initial={{y:12,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:.04*i}} onClick={()=>open(c.id)}>
+   <div className="crows">{list.map((c,i)=><motion.button key={c.id} className="crow" initial={{y:12}} animate={{y:0}} transition={{delay:.04*i}} onClick={()=>open(c.id)}>
      <span className="cd" aria-hidden="true">{c.code}</span><span className="tx"><b>{c.name}</b><small>{c.sub}</small></span><Icon n="chev" s={18}/></motion.button>)}</div>
    {disc}</div></div>
 }
